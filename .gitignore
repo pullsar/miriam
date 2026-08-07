@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Database (runtime data, not source)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+memorial.db
+
+# Uploaded photos (runtime data)
+public/uploads/
+
+# Build artifacts / temp
+*.log
+tmp/
+
+# Test scripts (one-off, not part of the site)
+test-*.js
+cleanup-*.js
+delete-test*.js
+e2e-*.js
+list-tributes.js
+check-db.js
+cleanup-test-photo.js
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Screenshots
+screenshot-*.png

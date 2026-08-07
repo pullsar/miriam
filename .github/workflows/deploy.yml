@@ -1,0 +1,57 @@
+name: Deploy to miriamngo.com
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-miriamngo
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p ${{ secrets.DEPLOY_PORT }} -i ~/.ssh/deploy_key" \
+            --exclude 'node_modules/' \
+            --exclude '.env' \
+            --exclude 'data/' \
+            --exclude 'public/uploads/' \
+            --exclude 'memorial.db' \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            ./ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}/
+
+      - name: Install deps and restart on server
+        run: |
+          ssh -p ${{ secrets.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd ${{ secrets.DEPLOY_PATH }} && npm install --production --no-audit --no-fund && pm2 restart memorial-site --update-env 2>&1"
+
+      - name: Health check
+        run: |
+          sleep 3
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://miriamngo.com/ || echo "000")
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Health check failed with status $STATUS"
+            exit 1
+          fi
+          echo "Health check passed"
