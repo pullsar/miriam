@@ -43,15 +43,23 @@ jobs:
         run: |
           ssh -p ${{ secrets.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd ${{ secrets.DEPLOY_PATH }} && npm install --production --no-audit --no-fund && pm2 restart memorial-site --update-env 2>&1"
+            "cd ${{ secrets.DEPLOY_PATH }} && npm install --omit=dev --no-audit --no-fund && pm2 restart memorial-site --update-env 2>&1"
 
       - name: Health check
         run: |
-          sleep 3
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://miriamngo.com/ || echo "000")
-          echo "HTTP status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "::error::Health check failed with status $STATUS"
-            exit 1
-          fi
-          echo "Health check passed"
+          sleep 5
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://miriamngo.com/ || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Health check failed after 5 attempts (last status: $STATUS)"
+          # Dump recent PM2 logs for debugging
+          ssh -p ${{ secrets.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "pm2 logs memorial-site --lines 15 --nostream 2>&1" || true
+          exit 1
