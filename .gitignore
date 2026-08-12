@@ -19,6 +19,7 @@ public/uploads/
 # Build artifacts / temp
 *.log
 tmp/
+.worktrees/
 
 # Test scripts (one-off, not part of the site)
 test-*.js
