@@ -23,15 +23,15 @@ out.mkdir(parents=True, exist_ok=True)
 
 READINGS = {
     "wisdom_3_1_9": [
-        "amamihe", "wisdom", "mkpuru obi", "mkpụrụ obi", "eziomume",
-        "ezi omume", "aja nsureoku", "aja nsuruoku",
+        "amamihe", "wisdom 3", "mkpuru obi", "mkpụrụ obi", "eziomume",
+        "ezi omume", "aja nsureoku", "aja nsuruoku", "aja nsureọkụ",
     ],
     "psalm_23": [
-        "abuoma", "abụ ọma", "psalm 23", "dinwenu bu onye nche",
+        "abuoma 23", "abụ ọma 23", "psalm 23", "dinwenu bu onye nche",
         "dinwenụ bụ onye nche", "ihe m ga-acho", "ihe m ga-achọ",
     ],
     "2_timothy_4_6_8": [
-        "timoti", "timothy", "aluola m ezigbo ogu", "alụọla m ezigbo ọgụ",
+        "2 timoti", "2 timothy", "aluola m ezigbo ogu", "alụọla m ezigbo ọgụ",
         "okpueze", "onyeokaikpe", "onye ọkaikpe",
     ],
     "john_14_1_6": [
@@ -75,16 +75,28 @@ if (root / "reports").exists():
 
 text_results = []
 scan_roots = [root / "apktool", root / "jadx", root / "splits"]
-text_ext = {".txt", ".json", ".xml", ".html", ".htm", ".js", ".java", ".kt", ".csv", ".md", ".properties"}
+# React Native production code is commonly stored in extensionless or .bundle
+# files (especially assets/index.android.bundle). Include it explicitly and
+# permit large bundles while still refusing arbitrary huge binary files.
+text_ext = {
+    ".txt", ".json", ".xml", ".html", ".htm", ".js", ".bundle", ".java",
+    ".kt", ".csv", ".md", ".properties", ".dart"
+}
+MAX_TEXT_BYTES = 100 * 1024 * 1024
 
 for base in scan_roots:
     if not base.exists():
         continue
     for p in base.rglob("*"):
-        if not p.is_file() or p.suffix.lower() not in text_ext:
+        if not p.is_file():
+            continue
+        # Accept standard text extensions plus the canonical React Native bundle
+        # name even when an app vendor omits a suffix.
+        is_rn_bundle = p.name in {"index.android.bundle", "main.jsbundle"}
+        if p.suffix.lower() not in text_ext and not is_rn_bundle:
             continue
         try:
-            if p.stat().st_size > 20 * 1024 * 1024:
+            if p.stat().st_size > MAX_TEXT_BYTES:
                 continue
             text = p.read_text("utf-8", errors="ignore")
         except Exception:
@@ -93,21 +105,27 @@ for base in scan_roots:
         for reading, anchors in READINGS.items():
             positions = []
             for a in anchors:
-                i = low.find(a)
-                if i >= 0:
+                start = 0
+                while True:
+                    i = low.find(a, start)
+                    if i < 0:
+                        break
                     positions.append((i, a))
+                    start = i + max(1, len(a))
+                    if len(positions) >= 20:
+                        break
             if not positions:
                 continue
-            for i, anchor in sorted(positions)[:4]:
-                lo = max(0, i - 400)
-                hi = min(len(text), i + len(anchor) + 900)
+            for i, anchor in sorted(positions)[:12]:
+                lo = max(0, i - 700)
+                hi = min(len(text), i + len(anchor) + 2200)
                 excerpt = norm(text[lo:hi])
                 text_results.append({
                     "reading": reading,
                     "file": str(p.relative_to(root)),
                     "anchor": anchor,
                     "offset": i,
-                    "excerpt": excerpt[:1400],
+                    "excerpt": excerpt[:3000],
                 })
 
 seen = set()
@@ -118,7 +136,7 @@ for r in text_results:
         seen.add(key)
         dedup.append(r)
 (out / "target-text-snippets.json").write_text(
-    json.dumps(dedup[:300], ensure_ascii=False, indent=2)
+    json.dumps(dedup[:500], ensure_ascii=False, indent=2)
 )
 
 db_report = []
@@ -185,7 +203,7 @@ urls = []
 url_file = root / "reports/urls.txt"
 if url_file.exists():
     urls = [u.strip() for u in url_file.read_text(errors="replace").splitlines() if u.strip()]
-(out / "endpoints.txt").write_text("\n".join(urls[:2000]) + ("\n" if urls else ""))
+(out / "endpoints.txt").write_text("\n".join(urls[:4000]) + ("\n" if urls else ""))
 
 summary = []
 summary.append("# Catholic Igbo app evidence")
