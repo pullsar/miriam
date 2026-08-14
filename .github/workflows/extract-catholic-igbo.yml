@@ -43,12 +43,16 @@ jobs:
           echo "/opt/jadx/bin" >> "$GITHUB_PATH"
 
       - name: Download, decompile and inspect
+        id: extract_app
+        continue-on-error: true
         shell: bash
         run: |
-          set -euxo pipefail
+          set -x
+          printf 'matrix.app=<%s>\n' "${{ matrix.app }}"
           bash scripts/extract-catholic-igbo-app.sh "${{ matrix.app }}" "research-out/${{ matrix.app }}"
 
       - name: Build compact evidence bundle
+        if: steps.extract_app.outcome == 'success'
         shell: bash
         run: |
           set -euxo pipefail
@@ -57,6 +61,7 @@ jobs:
             "research-out/${{ matrix.app }}/evidence"
 
       - name: Upload evidence
+        if: steps.extract_app.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: catholic-igbo-${{ matrix.app }}-evidence-${{ github.run_id }}
@@ -64,3 +69,20 @@ jobs:
           if-no-files-found: error
           retention-days: 3
           compression-level: 9
+
+      - name: Upload extraction diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: catholic-igbo-${{ matrix.app }}-diagnostics-${{ github.run_id }}
+          path: research-out/${{ matrix.app }}/reports/
+          if-no-files-found: warn
+          retention-days: 3
+          compression-level: 9
+
+      - name: Fail job if extraction failed
+        if: steps.extract_app.outcome != 'success'
+        shell: bash
+        run: |
+          echo "Extraction failed; diagnostic artifact has been preserved."
+          exit 1
