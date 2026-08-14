@@ -1,0 +1,66 @@
+name: Extract Catholic Igbo Missal evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/igbo-missal-extract
+    paths:
+      - ".github/workflows/extract-catholic-igbo.yml"
+      - "scripts/extract-catholic-igbo-app.sh"
+      - "scripts/analyze_igbo_payload.py"
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [365, pworld]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install analysis tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            apktool apksigner sqlite3 ripgrep unzip zip file jq curl \
+            python3 python3-pip openjdk-17-jre-headless
+          JADX_URL="$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest \
+            | jq -r '.assets[] | select(.name | test("^jadx-[0-9].*\\.zip$")) | .browser_download_url' \
+            | head -n1)"
+          test -n "$JADX_URL"
+          curl -fL --retry 3 "$JADX_URL" -o /tmp/jadx.zip
+          sudo unzip -q /tmp/jadx.zip -d /opt/jadx
+          echo "/opt/jadx/bin" >> "$GITHUB_PATH"
+
+      - name: Download, decompile and inspect
+        shell: bash
+        run: |
+          set -euxo pipefail
+          bash scripts/extract-catholic-igbo-app.sh "${{ matrix.app }}" "research-out/${{ matrix.app }}"
+
+      - name: Build compact evidence bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 scripts/analyze_igbo_payload.py \
+            "research-out/${{ matrix.app }}" \
+            "research-out/${{ matrix.app }}/evidence"
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: catholic-igbo-${{ matrix.app }}-evidence-${{ github.run_id }}
+          path: research-out/${{ matrix.app }}/evidence/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 9
