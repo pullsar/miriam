@@ -35,8 +35,6 @@ printf '%s\n' "$DIRECT"  > "$OUT/reports/download-url.txt"
 PAYLOAD="$OUT/download/app.pkg"
 rm -f "$PAYLOAD"
 
-# Attempt 1: APKPure's public direct endpoint. Keep full diagnostics because
-# this endpoint occasionally changes behavior for datacenter IPs.
 printf 'Downloading directly: %s\n' "$LABEL"
 set +e
 curl --fail --location --retry 2 --retry-delay 2 \
@@ -54,15 +52,13 @@ if [[ $CURL_RC -eq 0 && -s "$PAYLOAD" ]]; then
   MIME="$(file -b --mime-type "$PAYLOAD" || true)"
   printf '%s\n' "$MIME" > "$OUT/reports/direct-mime.txt"
   case "$MIME" in
-    application/zip|application/vnd.android.package-archive|application/octet-stream)
+    application/zip|application/xapk-package-archive|application/vnd.android.package-archive|application/octet-stream)
       DIRECT_OK=1
       printf 'direct-apkpure\n' > "$OUT/reports/download-method.txt"
       ;;
   esac
 fi
 
-# Attempt 2: apkeep. EFF's apkeep uses APKPure's version/API metadata and is
-# substantially more resilient than depending on the public shortcut URL.
 if [[ $DIRECT_OK -ne 1 ]]; then
   rm -f "$PAYLOAD"
   printf 'Direct download unavailable (curl rc=%s); trying apkeep.\n' "$CURL_RC" \
@@ -98,16 +94,52 @@ fi
 sha256sum "$PAYLOAD" | tee "$OUT/reports/sha256.txt"
 file "$PAYLOAD" | tee "$OUT/reports/file-type.txt"
 
-# APKPure/apkeep may return APK or XAPK/ZIP.
 if unzip -tqq "$PAYLOAD" >/dev/null 2>&1; then
   unzip -q "$PAYLOAD" -d "$OUT/unpacked"
 else
   cp "$PAYLOAD" "$OUT/unpacked/base.apk"
 fi
 
-# Prefer an explicitly named base.apk. Otherwise select the largest APK; for
-# split bundles that is normally the base package rather than a config split.
-BASE_APK="$(find "$OUT/unpacked" -type f -name 'base.apk' | head -n1 || true)"
+# Preserve XAPK metadata when present; it identifies base/config splits and
+# version information without guessing from APK size.
+if [[ -f "$OUT/unpacked/manifest.json" ]]; then
+  cp "$OUT/unpacked/manifest.json" "$OUT/reports/xapk-manifest.json"
+fi
+
+# For APKPure XAPKs the actual base APK is commonly named after the package.
+# Prefer it over config.arm64_v8a.apk, which can be larger solely because it
+# contains Flutter's native libapp.so.
+BASE_APK=""
+for candidate in \
+  "$OUT/unpacked/${PACKAGE}.apk" \
+  "$OUT/unpacked/base.apk"; do
+  if [[ -f "$candidate" ]]; then
+    BASE_APK="$candidate"
+    break
+  fi
+done
+if [[ -z "$BASE_APK" && -f "$OUT/unpacked/manifest.json" ]]; then
+  BASE_NAME="$(python3 - "$OUT/unpacked/manifest.json" <<'PY'
+import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+except Exception:
+    print(""); raise SystemExit
+# APKPure XAPK manifests have used split_apks and split_configs over time.
+for key in ("split_apks", "split_configs"):
+    for x in d.get(key,[]) or []:
+        if isinstance(x,dict):
+            f=x.get("file") or x.get("name")
+            ident=(x.get("id") or "").lower()
+            if f and (ident in {"base","master"} or "base" in f.lower()):
+                print(f); raise SystemExit
+print("")
+PY
+)"
+  if [[ -n "$BASE_NAME" && -f "$OUT/unpacked/$BASE_NAME" ]]; then
+    BASE_APK="$OUT/unpacked/$BASE_NAME"
+  fi
+fi
 if [[ -z "$BASE_APK" ]]; then
   BASE_APK="$(find "$OUT/unpacked" -type f -name '*.apk' -printf '%s %p\n' 2>/dev/null \
     | sort -nr | head -n1 | cut -d' ' -f2- || true)"
@@ -123,8 +155,6 @@ printf '%s\n' "$BASE_APK" | tee "$OUT/reports/base-apk.txt"
 apksigner verify --print-certs "$BASE_APK" \
   > "$OUT/reports/apksigner.txt" 2>&1 || true
 
-# JADX supports APK/XAPK directly, but apktool remains valuable for decoded
-# Android resources. Run both so one can recover evidence if the other fails.
 apktool d -f -o "$OUT/apktool" "$BASE_APK" >"$OUT/reports/apktool.log" 2>&1 || true
 jadx --show-bad-code --deobf -d "$OUT/jadx" "$PAYLOAD" >"$OUT/reports/jadx.log" 2>&1 || \
 jadx --show-bad-code --deobf -d "$OUT/jadx" "$BASE_APK" >>"$OUT/reports/jadx.log" 2>&1 || true
@@ -142,12 +172,37 @@ find "$OUT/apktool" "$OUT/jadx" "$OUT/splits" -type f -printf '%p\t%s\n' 2>/dev/
 find "$OUT/apktool" "$OUT/jadx" "$OUT/splits" -type f \
   \( -iname '*.db' -o -iname '*.sqlite' -o -iname '*.sqlite3' -o -iname '*.realm' \
      -o -iname '*.json' -o -iname '*.xml' -o -iname '*.html' -o -iname '*.htm' \
-     -o -iname '*.txt' -o -iname '*.csv' -o -iname '*.js' -o -iname '*.kt' \
-     -o -iname '*.java' -o -iname '*.dart' \) \
+     -o -iname '*.txt' -o -iname '*.csv' -o -iname '*.js' -o -iname '*.bundle' \
+     -o -iname '*.kt' -o -iname '*.java' -o -iname '*.dart' \) \
   -printf '%p\n' 2>/dev/null | sort -u > "$OUT/reports/data-candidates.txt" || true
+
+# App-specific resource configuration: Firebase project IDs/URLs, web endpoints,
+# storage buckets and other values that can identify the remote reading store.
+rg -n -i --no-heading \
+  'google_app_id|google_api_key|project_id|firebase_database_url|google_storage_bucket|gcm_defaultSenderId|firestore|firebaseio|firebaseapp|appspot' \
+  "$OUT/apktool" "$OUT/splits" 2>/dev/null \
+  | head -n 2000 > "$OUT/reports/app-config-locations.txt" || true
+
+# Flutter release Dart code lives in native libapp.so. `strings` cannot recover
+# every Dart object, but it reliably exposes many collection names, endpoint
+# URLs and ASCII textual fingerprints. Keep only research-relevant lines.
+: > "$OUT/reports/native-target-strings.txt"
+while IFS= read -r so; do
+  {
+    printf '===== %s =====\n' "$so"
+    strings -a -n 5 "$so" 2>/dev/null | grep -Eai \
+      'Amamihe|Wisdom|Abu.?Oma|Psalm|Timoti|Timothy|Jon 14|John 14|Mkpuru.?obi|eziomume|Dinwenu|onye nche|okpueze|Onyeokaikpe|firebase|firestore|collection|document|https?://|catholic|igbo|reading|missal' \
+      | head -n 10000 || true
+  } >> "$OUT/reports/native-target-strings.txt"
+done < <(find "$OUT/splits" "$OUT/unpacked" -type f -name '*.so' 2>/dev/null | sort -u)
 
 rg -o --no-filename 'https?://[^"<> )]+' "$OUT/jadx" "$OUT/apktool" "$OUT/splits" 2>/dev/null \
   | sed 's/[;,]$//' | sort -u > "$OUT/reports/urls.txt" || true
+
+# Include URLs exposed only through Flutter/native strings.
+grep -Eao 'https?://[^[:space:]"<>)]+' "$OUT/reports/native-target-strings.txt" 2>/dev/null \
+  | sort -u >> "$OUT/reports/urls.txt" || true
+sort -u -o "$OUT/reports/urls.txt" "$OUT/reports/urls.txt" || true
 
 rg -n -i --no-heading \
   'firebase|firestore|roomdatabase|sqlite|realm|retrofit|wordpress|wp-json|graphql|api/|database|assets/|raw/|flutter|sqflite|hive' \
