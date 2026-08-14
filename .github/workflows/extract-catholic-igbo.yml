@@ -33,7 +33,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             apktool apksigner sqlite3 ripgrep unzip zip file jq curl \
-            python3 python3-pip openjdk-17-jre-headless
+            python3 python3-pip python3-venv openjdk-17-jre-headless
+
           JADX_URL="$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest \
             | jq -r '.assets[] | select(.name | test("^jadx-[0-9].*\\.zip$")) | .browser_download_url' \
             | head -n1)"
@@ -41,6 +42,13 @@ jobs:
           curl -fL --retry 3 "$JADX_URL" -o /tmp/jadx.zip
           sudo unzip -q /tmp/jadx.zip -d /opt/jadx
           echo "/opt/jadx/bin" >> "$GITHUB_PATH"
+
+          # P1sec/hermes-dec supports current Hermes bytecode (including the
+          # 97-99 family added in its 2026 releases). Keep it isolated from the
+          # runner Python environment.
+          python3 -m venv /tmp/hermes-dec
+          /tmp/hermes-dec/bin/pip install --disable-pip-version-check hermes-dec
+          echo "/tmp/hermes-dec/bin" >> "$GITHUB_PATH"
 
       - name: Download, decompile and inspect
         id: extract_app
