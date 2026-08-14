@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP="${1:?usage: $0 {365|pworld} [output-dir]}"
+if [[ $# -lt 1 ]]; then
+  echo "usage: $0 365|pworld [output-dir]" >&2
+  exit 2
+fi
+APP="$1"
 OUT="${2:-research-out/$APP}"
 
 mkdir -p "$OUT"/{download,unpacked,apktool,jadx,reports}
