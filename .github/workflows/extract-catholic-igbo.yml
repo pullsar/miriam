@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/extract-catholic-igbo.yml"
       - "scripts/extract-catholic-igbo-app.sh"
+      - "scripts/decompile-hermes.sh"
       - "scripts/analyze_igbo_payload.py"
 
 permissions:
@@ -43,9 +44,6 @@ jobs:
           sudo unzip -q /tmp/jadx.zip -d /opt/jadx
           echo "/opt/jadx/bin" >> "$GITHUB_PATH"
 
-          # P1sec/hermes-dec supports current Hermes bytecode (including the
-          # 97-99 family added in its 2026 releases). Keep it isolated from the
-          # runner Python environment.
           python3 -m venv /tmp/hermes-dec
           /tmp/hermes-dec/bin/pip install --disable-pip-version-check hermes-dec
           echo "/tmp/hermes-dec/bin" >> "$GITHUB_PATH"
@@ -58,6 +56,13 @@ jobs:
           set -x
           printf 'matrix.app=<%s>\n' "${{ matrix.app }}"
           bash scripts/extract-catholic-igbo-app.sh "${{ matrix.app }}" "research-out/${{ matrix.app }}"
+
+      - name: Decode Hermes bytecode when present
+        if: steps.extract_app.outcome == 'success'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          bash scripts/decompile-hermes.sh "research-out/${{ matrix.app }}"
 
       - name: Build compact evidence bundle
         if: steps.extract_app.outcome == 'success'
