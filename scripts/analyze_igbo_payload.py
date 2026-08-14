@@ -9,6 +9,7 @@ records/snippets for the four funeral readings.
 """
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import re
@@ -40,6 +41,13 @@ READINGS = {
     ],
 }
 
+TARGET_CITATIONS = {
+    "wisdom_3_1_9": [r"Amamihe\s+3:1\s*[-–]\s*9(?:[a-z])?", r"Wisdom\s+3:1\s*[-–]\s*9(?:[a-z])?"],
+    "psalm_23": [r"Abụọma\s+23(?::[^'\"]*)?", r"Abuoma\s+23(?::[^'\"]*)?", r"Psalm\s+23(?::[^'\"]*)?"],
+    "2_timothy_4_6_8": [r"2\s*Timoti\s+4:6\s*[-–]\s*8(?:[^'\"]*)?", r"2\s*Timothy\s+4:6\s*[-–]\s*8(?:[^'\"]*)?"],
+    "john_14_1_6": [r"Jọn\s+14:1\s*[-–]\s*6", r"Jon\s+14:1\s*[-–]\s*6", r"John\s+14:1\s*[-–]\s*6"],
+}
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -53,6 +61,46 @@ def norm(s: str) -> str:
 def reading_hits(text: str) -> list[str]:
     low = text.lower()
     return [k for k, anchors in READINGS.items() if any(a in low for a in anchors)]
+
+def enclosing_object(text: str, pos: int, max_back: int = 12000, max_forward: int = 50000) -> str:
+    """Best-effort extraction of the JS object containing pos.
+
+    hermes-dec output commonly uses assignments like r6 = {'citation': ..., 'text': ...};
+    locating the nearest assignment/object opening and balancing braces is enough
+    to preserve the full target reading while excluding unrelated corpus data.
+    """
+    lo = max(0, pos - max_back)
+    prefix = text[lo:pos]
+    starts = [m.start() + lo for m in re.finditer(r"(?:=|\[\d+\]\s*=)\s*\{", prefix)]
+    start = starts[-1] if starts else text.rfind("{", lo, pos)
+    if start < 0:
+        return text[max(0, pos-3000):min(len(text), pos+12000)]
+    brace = text.find("{", start, pos + 2)
+    if brace < 0:
+        brace = start
+    depth = 0
+    in_str = None
+    esc = False
+    end_limit = min(len(text), brace + max_forward)
+    for i in range(brace, end_limit):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == in_str:
+                in_str = None
+            continue
+        if ch in ("'", '"'):
+            in_str = ch
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[brace:i+1]
+    return text[brace:end_limit]
 
 manifest = {
     "root": str(root),
@@ -74,10 +122,8 @@ if (root / "reports").exists():
     shutil.copytree(root / "reports", out / "raw-reports", dirs_exist_ok=True)
 
 text_results = []
+structured = []
 scan_roots = [root / "apktool", root / "jadx", root / "splits"]
-# React Native production code is commonly stored in extensionless or .bundle
-# files (especially assets/index.android.bundle). Include it explicitly and
-# permit large bundles while still refusing arbitrary huge binary files.
 text_ext = {
     ".txt", ".json", ".xml", ".html", ".htm", ".js", ".bundle", ".java",
     ".kt", ".csv", ".md", ".properties", ".dart"
@@ -90,8 +136,6 @@ for base in scan_roots:
     for p in base.rglob("*"):
         if not p.is_file():
             continue
-        # Accept standard text extensions plus the canonical React Native bundle
-        # name even when an app vendor omits a suffix.
         is_rn_bundle = p.name in {"index.android.bundle", "main.jsbundle"}
         if p.suffix.lower() not in text_ext and not is_rn_bundle:
             continue
@@ -102,6 +146,24 @@ for base in scan_roots:
         except Exception:
             continue
         low = text.lower()
+
+        # First recover complete structured target objects by citation. This is
+        # especially important for Hermes bytecode, where a raw string table has
+        # no object association but hermes-dec reconstructs those relationships.
+        for reading, patterns in TARGET_CITATIONS.items():
+            for pattern in patterns:
+                for m in re.finditer(pattern, text, re.I):
+                    obj = enclosing_object(text, m.start())
+                    if len(obj) < 80:
+                        continue
+                    structured.append({
+                        "reading": reading,
+                        "file": str(p.relative_to(root)),
+                        "citation_match": m.group(0),
+                        "offset": m.start(),
+                        "object": obj[:50000],
+                    })
+
         for reading, anchors in READINGS.items():
             positions = []
             for a in anchors:
@@ -112,11 +174,11 @@ for base in scan_roots:
                         break
                     positions.append((i, a))
                     start = i + max(1, len(a))
-                    if len(positions) >= 20:
+                    if len(positions) >= 40:
                         break
             if not positions:
                 continue
-            for i, anchor in sorted(positions)[:12]:
+            for i, anchor in sorted(positions)[:16]:
                 lo = max(0, i - 700)
                 hi = min(len(text), i + len(anchor) + 2200)
                 excerpt = norm(text[lo:hi])
@@ -136,7 +198,18 @@ for r in text_results:
         seen.add(key)
         dedup.append(r)
 (out / "target-text-snippets.json").write_text(
-    json.dumps(dedup[:500], ensure_ascii=False, indent=2)
+    json.dumps(dedup[:700], ensure_ascii=False, indent=2)
+)
+
+seen = set()
+structured_dedup = []
+for r in structured:
+    key = (r["reading"], r["file"], r["offset"])
+    if key not in seen:
+        seen.add(key)
+        structured_dedup.append(r)
+(out / "structured-funeral-readings.json").write_text(
+    json.dumps(structured_dedup[:250], ensure_ascii=False, indent=2)
 )
 
 db_report = []
@@ -169,13 +242,8 @@ for base in scan_roots:
                 try:
                     rows = con.execute(f'SELECT * FROM "{safe_t}" LIMIT 50000')
                     for row in rows:
-                        vals = []
-                        for c in colnames:
-                            v = row[c]
-                            if isinstance(v, str):
-                                vals.append(v)
-                        joined = "\n".join(vals)
-                        hits = reading_hits(joined)
+                        vals = [row[c] for c in colnames if isinstance(row[c], str)]
+                        hits = reading_hits("\n".join(vals))
                         if hits:
                             table["matches"].append({
                                 "readings": hits,
@@ -215,14 +283,16 @@ summary.append("")
 summary.append("## Target evidence counts")
 for k in READINGS:
     n_text = sum(1 for r in dedup if r["reading"] == k)
+    n_struct = sum(1 for r in structured_dedup if r["reading"] == k)
     n_db = sum(
         1 for d in db_report for t in d.get("tables", [])
         for m in t.get("matches", []) if k in m.get("readings", [])
     )
-    summary.append(f"- `{k}`: {n_text} text-location matches; {n_db} SQLite row matches")
+    summary.append(f"- `{k}`: {n_text} text matches; {n_struct} structured citation objects; {n_db} SQLite row matches")
 summary.append("")
 summary.append("## Files")
 summary.append("- `manifest.json` — package, download provenance and payload hash")
+summary.append("- `structured-funeral-readings.json` — target citation objects recovered from app code/data")
 summary.append("- `target-text-snippets.json` — bounded target excerpts + locations")
 summary.append("- `sqlite-target-records.json` — schemas and target-only matching rows")
 summary.append("- `endpoints.txt` — discovered network/API endpoints")
