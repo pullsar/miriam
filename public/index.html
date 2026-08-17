@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="preload-locked">
-  <div class="preloader" id="preloader" tabindex="0" role="button" aria-label="Enter the memorial site">
+  <section class="preloader" id="preloader" aria-labelledby="preloaderTitle">
     <div class="envelope">
       <div class="envelope-flap"></div>
       <div class="envelope-letter">
@@ -19,17 +19,30 @@
       </div>
       <div class="envelope-body"></div>
     </div>
-    <h2 class="preloader-title">In Christ, In Glory</h2>
+    <h2 class="preloader-title" id="preloaderTitle">In Christ, In Glory</h2>
     <p class="preloader-hint" id="preloaderHint">Click or tap to enter</p>
-    <span class="preloader-cta" aria-hidden="true">
+    <button class="preloader-cta" id="preloaderEnter" type="button">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v12"/><path d="M5 12l7 7 7-7"/></svg>
       <span>Enter & listen</span>
-    </span>
+    </button>
+    <div class="preloader-downloads" id="preloaderDownloads" aria-label="Memorial resources">
+      <p class="preloader-downloads-label">Memorial resources</p>
+      <div class="preloader-download-actions">
+        <a class="preloader-download" href="/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf" download aria-label="Download the full memorial brochure as a PDF">
+          <span class="preloader-download-title">Full Memorial Brochure</span>
+          <span class="preloader-download-meta">PDF · 11.9 MB</span>
+        </a>
+        <a class="preloader-download" href="/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf" download aria-label="Download the mobile readings and Order of Mass as a PDF">
+          <span class="preloader-download-title">Mobile Readings &amp; Order of Mass</span>
+          <span class="preloader-download-meta">PDF · 0.5 MB</span>
+        </a>
+      </div>
+    </div>
     <div class="preloader-loading" id="preloaderLoading" hidden>
       <span class="preloader-spinner" aria-hidden="true"></span>
       <p>Please wait, loading music...</p>
     </div>
-  </div>
+  </section>
 
   <nav class="nav" id="nav">
     <a class="nav-logo" href="#home">Home with God</a>
@@ -392,11 +405,15 @@
     <section class="section downloads" id="downloads">
       <div class="container">
         <p class="section-eyebrow">Downloads</p>
-        <h2 class="section-title">Digital Brochures</h2>
+        <h2 class="section-title">Digital Memorial Resources</h2>
         <div class="download-grid">
-          <a class="download-card" href="/downloads/programme-of-events.pdf" download>
-            <h3>Programme of Events</h3>
-            <span>Download PDF brochure</span>
+          <a class="download-card" href="/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf" download>
+            <h3>Full Memorial Brochure</h3>
+            <span>Download PDF · 11.9 MB</span>
+          </a>
+          <a class="download-card" href="/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf" download>
+            <h3>Mobile Readings &amp; Order of Mass</h3>
+            <span>Download PDF · 0.5 MB</span>
           </a>
           <a class="download-card" href="/qrcode.png" download>
             <h3>Website QR Code</h3>

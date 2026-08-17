@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const writeAnother = document.getElementById('writeAnother');
   const tributeSubmit = document.getElementById('tributeSubmit');
   const preloader = document.getElementById('preloader');
+  const preloaderEnter = document.getElementById('preloaderEnter');
+  const preloaderDownloads = document.getElementById('preloaderDownloads');
 
   const playlist = [
     '/audio/soon-ah-will-be-done.mp3',
@@ -56,6 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const preloaderLoading = document.getElementById('preloaderLoading');
   const preloaderHint = document.getElementById('preloaderHint');
 
+  if (preloaderDownloads) {
+    preloaderDownloads.addEventListener('click', event => event.stopPropagation());
+    preloaderDownloads.addEventListener('keydown', event => event.stopPropagation());
+  }
+
   if (preloader) {
     let entering = false;
     const LOADING_TIMEOUT = 4000;
@@ -81,9 +88,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 1050);
     };
 
-    preloader.addEventListener('click', enter);
-    preloader.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') enter();
+    if (preloaderEnter) {
+      preloaderEnter.addEventListener('click', (event) => {
+        event.stopPropagation();
+        enter();
+      });
+    }
+
+    preloader.addEventListener('click', (event) => {
+      if (event.target.closest('a, button')) return;
+      enter();
     });
 
     if (sessionStorage.getItem('memorialEntered')) {
