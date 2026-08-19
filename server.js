@@ -90,7 +90,24 @@ const trackedDownloads = [
 ];
 
 trackedDownloads.forEach(({ resource, fileName }) => {
-  app.get(`/downloads/${fileName}`, (req, res) => {
+  const downloadPath = `/downloads/${fileName}`;
+
+  app.head(downloadPath, (req, res) => {
+    const filePath = path.join(downloadsDir, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.sendStatus(404);
+    }
+
+    const { size } = fs.statSync(filePath);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': String(size),
+      'Content-Disposition': `attachment; filename="${fileName}"`
+    });
+    res.status(200).end();
+  });
+
+  app.get(downloadPath, (req, res) => {
     const filePath = path.join(downloadsDir, fileName);
     if (!fs.existsSync(filePath)) {
       return res.sendStatus(404);

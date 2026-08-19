@@ -42,6 +42,11 @@ test('tracked memorial PDFs expose independent successful-download totals', asyn
 
   assert.deepEqual(await counts(), { brochure: 0, orderOfMass: 0 });
 
+  const brochureMetadata = await fetch(`${baseUrl}${BROCHURE_PATH}`, { method: 'HEAD' });
+  assert.equal(brochureMetadata.status, 200);
+  assert.match(brochureMetadata.headers.get('content-type') || '', /application\/pdf/);
+  assert.deepEqual(await counts(), { brochure: 0, orderOfMass: 0 });
+
   const brochure = await fetch(`${baseUrl}${BROCHURE_PATH}`);
   assert.equal(brochure.status, 200);
   assert.equal(await brochure.text(), '%PDF-1.4\n%%EOF');

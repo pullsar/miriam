@@ -57,6 +57,12 @@ test('PDF links expose synchronized number-only counter hooks', () => {
   assert.equal(html.split('class="download-count" data-download-count="order-of-mass" hidden').length - 1, 2);
 });
 
+test('the tribute form contains no stray editorial text', () => {
+  const html = read('public/index.html');
+
+  assert.doesNotMatch(html, /21`\s*<p class="form-status"/);
+});
+
 test('download totals progressively enhance without blocking the PDF links', () => {
   const script = read('public/app.js');
   const styles = read('public/style.css');
