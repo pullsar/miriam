@@ -28,13 +28,15 @@
     <div class="preloader-downloads" id="preloaderDownloads" aria-label="Memorial resources">
       <p class="preloader-downloads-label">Memorial resources</p>
       <div class="preloader-download-actions">
-        <a class="preloader-download" href="/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf" download aria-label="Download the full memorial brochure as a PDF">
+        <a class="preloader-download" href="/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf" download data-download-resource="brochure" aria-label="Download the full memorial brochure as a PDF">
           <span class="preloader-download-title">Full Memorial Brochure</span>
           <span class="preloader-download-meta">PDF · 11.9 MB</span>
+          <span class="download-count" data-download-count="brochure" hidden></span>
         </a>
-        <a class="preloader-download" href="/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf" download aria-label="Download the mobile readings and Order of Mass as a PDF">
+        <a class="preloader-download" href="/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf" download data-download-resource="order-of-mass" aria-label="Download the mobile readings and Order of Mass as a PDF">
           <span class="preloader-download-title">Mobile Readings &amp; Order of Mass</span>
           <span class="preloader-download-meta">PDF · 0.5 MB</span>
+          <span class="download-count" data-download-count="order-of-mass" hidden></span>
         </a>
       </div>
     </div>
@@ -81,7 +83,7 @@
       </button>
       <div class="hero-ctas">
         <a class="btn-hero btn-hero-gold" href="#tributes">Write a Tribute</a>
-        <a class="btn-hero btn-hero-outline" href="#programme">View Programme</a>
+        <a class="btn-hero btn-hero-outline" href="/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf" download data-download-resource="brochure">Memorial Brochure</a>
       </div>
     </div>
   </header>
@@ -407,13 +409,15 @@
         <p class="section-eyebrow">Downloads</p>
         <h2 class="section-title">Digital Memorial Resources</h2>
         <div class="download-grid">
-          <a class="download-card" href="/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf" download>
+          <a class="download-card" href="/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf" download data-download-resource="brochure">
             <h3>Full Memorial Brochure</h3>
             <span>Download PDF · 11.9 MB</span>
+            <span class="download-count" data-download-count="brochure" hidden></span>
           </a>
-          <a class="download-card" href="/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf" download>
+          <a class="download-card" href="/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf" download data-download-resource="order-of-mass">
             <h3>Mobile Readings &amp; Order of Mass</h3>
             <span>Download PDF · 0.5 MB</span>
+            <span class="download-count" data-download-count="order-of-mass" hidden></span>
           </a>
           <a class="download-card" href="/qrcode.png" download>
             <h3>Website QR Code</h3>

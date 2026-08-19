@@ -15,6 +15,48 @@ document.addEventListener('DOMContentLoaded', () => {
   const preloaderEnter = document.getElementById('preloaderEnter');
   const preloaderDownloads = document.getElementById('preloaderDownloads');
 
+  const downloadCountLabels = {
+    brochure: 'Memorial brochure downloads',
+    'order-of-mass': 'Order of Mass downloads'
+  };
+  const downloadCountState = new Map();
+  const downloadCountFormatter = new Intl.NumberFormat();
+
+  function updateDownloadCount(resource, count) {
+    const numericCount = Math.max(0, Number.parseInt(count, 10) || 0);
+    const formattedCount = downloadCountFormatter.format(numericCount);
+    downloadCountState.set(resource, numericCount);
+
+    document.querySelectorAll(`[data-download-count="${resource}"]`).forEach(badge => {
+      badge.textContent = formattedCount;
+      badge.setAttribute('aria-label', `${downloadCountLabels[resource]}: ${formattedCount}`);
+      badge.removeAttribute('hidden');
+    });
+  }
+
+  async function loadDownloadCounts() {
+    try {
+      const response = await fetch('/api/download-counts', { headers: { Accept: 'application/json' } });
+      if (!response.ok) return;
+      const counts = await response.json();
+      updateDownloadCount('brochure', counts.brochure);
+      updateDownloadCount('order-of-mass', counts.orderOfMass);
+    } catch (_) {
+      // Downloads remain fully usable when totals are temporarily unavailable.
+    }
+  }
+
+  document.querySelectorAll('[data-download-resource]').forEach(link => {
+    link.addEventListener('click', () => {
+      const resource = link.dataset.downloadResource;
+      if (downloadCountState.has(resource)) {
+        updateDownloadCount(resource, downloadCountState.get(resource) + 1);
+      }
+    });
+  });
+
+  loadDownloadCounts();
+
   const playlist = [
     '/audio/soon-ah-will-be-done.mp3',
     '/audio/o-lord-my-god-how-great.mp3'
