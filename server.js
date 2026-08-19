@@ -65,17 +65,17 @@ const updatePhotoFilename = db.prepare(
 const getAllPhotos = db.prepare(`SELECT * FROM photos ORDER BY created_at DESC LIMIT 200`);
 
 db.exec(`
-  CREATE TABLE IF NOT EXISTS download_counts (
+  CREATE TABLE IF NOT EXISTS download_click_counts (
     resource TEXT PRIMARY KEY,
     count    INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0)
   )
 `);
 
 const incrementDownloadCount = db.prepare(`
-  INSERT INTO download_counts (resource, count) VALUES (?, 1)
+  INSERT INTO download_click_counts (resource, count) VALUES (?, 1)
   ON CONFLICT(resource) DO UPDATE SET count = count + 1
 `);
-const getDownloadCounts = db.prepare(`SELECT resource, count FROM download_counts`);
+const getDownloadCounts = db.prepare(`SELECT resource, count FROM download_click_counts`);
 
 const downloadsDir = process.env.DOWNLOADS_DIR || path.join(__dirname, 'public', 'downloads');
 const trackedDownloads = [
@@ -88,6 +88,9 @@ const trackedDownloads = [
     fileName: 'prof-miriam-ngozi-mgbakor-mobile-readings.pdf'
   }
 ];
+const trackedDownloadsByResource = new Map(
+  trackedDownloads.map(download => [download.resource, download])
+);
 
 trackedDownloads.forEach(({ resource, fileName }) => {
   const downloadPath = `/downloads/${fileName}`;
@@ -117,16 +120,23 @@ trackedDownloads.forEach(({ resource, fileName }) => {
       if (err) {
         console.error(`[downloads] Could not serve ${resource}:`, err.message);
         if (!res.headersSent) res.sendStatus(err.statusCode || 500);
-        return;
-      }
-
-      try {
-        incrementDownloadCount.run(resource);
-      } catch (dbError) {
-        console.error(`[downloads] Could not count ${resource}:`, dbError.message);
       }
     });
   });
+});
+
+app.post('/api/download-counts/:resource', (req, res) => {
+  const download = trackedDownloadsByResource.get(req.params.resource);
+  if (!download || !fs.existsSync(path.join(downloadsDir, download.fileName))) {
+    return res.sendStatus(404);
+  }
+
+  try {
+    incrementDownloadCount.run(download.resource);
+    res.sendStatus(204);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not record the download.' });
+  }
 });
 
 app.get('/api/download-counts', (req, res) => {

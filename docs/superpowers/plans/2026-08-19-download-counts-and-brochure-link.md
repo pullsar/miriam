@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Count successful memorial brochure and mobile Order of Mass downloads, show compact number-only badges beside the existing download links, and replace the hero’s programme CTA with a direct memorial brochure download.
+**Goal:** Count deliberate memorial brochure and mobile Order of Mass link activations, show compact number-only badges beside the existing download links, and replace the hero’s programme CTA with a direct memorial brochure download.
 
-**Architecture:** Express will own the two stable PDF URLs so it can verify and serve each file while updating a dedicated SQLite counter. A read-only JSON endpoint will expose both totals. The existing single-page client will fetch those totals, reveal synchronized badges, and optimistically update them when a tracked link is clicked; static assets and all existing programme navigation remain unchanged.
+**Architecture:** Express will preserve and verify the two stable PDF URLs, while an anonymous POST endpoint records deliberate link activations in a dedicated SQLite counter. A read-only JSON endpoint will expose both totals. The existing single-page client will fetch those totals, reveal synchronized badges, optimistically update them when a tracked link is clicked, and record the activation without delaying the PDF; static assets and all existing programme navigation remain unchanged.
 
 **Tech Stack:** Node.js, Express 5, better-sqlite3, vanilla JavaScript, HTML/CSS, Node’s built-in test runner.
 
@@ -44,16 +44,16 @@ Expected: FAIL because `/api/download-counts` and tracked download handlers do n
 In `server.js`, derive `downloadsDir` from `process.env.DOWNLOADS_DIR` with `public/downloads` as the default. Create:
 
 ```sql
-CREATE TABLE IF NOT EXISTS download_counts (
+CREATE TABLE IF NOT EXISTS download_click_counts (
   resource TEXT PRIMARY KEY,
   count INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0)
 )
 ```
 
-Define exact route metadata for `brochure` and `order-of-mass`. Register both `app.get()` routes before `express.static()`. For each route, check `fs.existsSync(filePath)`, return `404` without changing state if absent, and use `res.download(filePath, fileName, callback)`. In the successful callback, execute:
+Define exact route metadata for `brochure` and `order-of-mass`. Keep both `app.get()` download routes before `express.static()`, and add `POST /api/download-counts/:resource`. The POST checks that the resource and file exist, then executes:
 
 ```sql
-INSERT INTO download_counts (resource, count) VALUES (?, 1)
+INSERT INTO download_click_counts (resource, count) VALUES (?, 1)
 ON CONFLICT(resource) DO UPDATE SET count = count + 1
 ```
 
@@ -95,7 +95,7 @@ Assert that the hero outline CTA reads `Memorial Brochure`, points directly to t
 <span class="download-count" data-download-count="order-of-mass" hidden></span>
 ```
 
-Assert `public/app.js` fetches `/api/download-counts`, uses `Intl.NumberFormat`, removes `hidden` after a successful response, and updates every badge matching the clicked resource. Assert the CSS contains a compact `.download-count` pill and a `[hidden]` rule.
+Assert `public/app.js` fetches `/api/download-counts`, uses `Intl.NumberFormat`, removes `hidden` after a successful response, POSTs each clicked resource with `keepalive`, and updates every matching badge. Assert the CSS contains a compact `.download-count` pill and a `[hidden]` rule.
 
 - [ ] **Step 2: Run the entry tests and confirm the red state**
 
@@ -115,7 +115,7 @@ Keep the `#programme` section and main navigation link intact.
 
 - [ ] **Step 4: Implement synchronized client-side totals**
 
-Inside the existing `DOMContentLoaded` callback, define resource labels, format counts with `Intl.NumberFormat`, and update all matching badge nodes. Fetch `/api/download-counts`; on success reveal the four badges and set their values. On failure, leave them hidden and do not block the links. Add a click listener to all `[data-download-resource]` links that increments the currently displayed total for every badge of that resource.
+Inside the existing `DOMContentLoaded` callback, define resource labels, format counts with `Intl.NumberFormat`, and update all matching badge nodes. Fetch `/api/download-counts`; on success reveal the four badges and set their values. On failure, leave them hidden and do not block the links. Add a click listener to all `[data-download-resource]` links that POSTs the anonymous activation with `keepalive` and increments the currently displayed total for every badge of that resource.
 
 - [ ] **Step 5: Style subtle number-only bubbles**
 

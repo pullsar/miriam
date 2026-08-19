@@ -50,14 +50,21 @@ test('tracked memorial PDFs expose independent successful-download totals', asyn
   const brochure = await fetch(`${baseUrl}${BROCHURE_PATH}`);
   assert.equal(brochure.status, 200);
   assert.equal(await brochure.text(), '%PDF-1.4\n%%EOF');
+  assert.deepEqual(await counts(), { brochure: 0, orderOfMass: 0 });
+
+  assert.equal((await fetch(`${baseUrl}/api/download-counts/brochure`, { method: 'POST' })).status, 204);
   assert.deepEqual(await counts(), { brochure: 1, orderOfMass: 0 });
 
   const readings = await fetch(`${baseUrl}${READINGS_PATH}`);
   assert.equal(readings.status, 200);
   assert.equal(await readings.text(), '%PDF-1.4\n%%EOF');
+  assert.deepEqual(await counts(), { brochure: 1, orderOfMass: 0 });
+
+  assert.equal((await fetch(`${baseUrl}/api/download-counts/order-of-mass`, { method: 'POST' })).status, 204);
   assert.deepEqual(await counts(), { brochure: 1, orderOfMass: 1 });
 
   fs.unlinkSync(path.join(downloadsDir, READINGS_FILE));
   assert.equal((await fetch(`${baseUrl}${READINGS_PATH}`)).status, 404);
+  assert.equal((await fetch(`${baseUrl}/api/download-counts/order-of-mass`, { method: 'POST' })).status, 404);
   assert.deepEqual(await counts(), { brochure: 1, orderOfMass: 1 });
 });

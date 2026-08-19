@@ -72,6 +72,7 @@ test('download totals progressively enhance without blocking the PDF links', () 
   assert.match(script, /badge\.removeAttribute\('hidden'\)/);
   assert.match(script, /querySelectorAll\(`\[data-download-count="\$\{resource\}"\]`\)/);
   assert.match(script, /querySelectorAll\('\[data-download-resource\]'\)/);
+  assert.match(script, /fetch\(`\/api\/download-counts\/\$\{resource\}`,[\s\S]*?method:\s*'POST'[\s\S]*?keepalive:\s*true/);
   assert.match(styles, /\.download-count\s*\{/);
   assert.match(styles, /\.download-count\[hidden\]\s*\{[\s\S]*?display:\s*none/);
 });

@@ -49,6 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-download-resource]').forEach(link => {
     link.addEventListener('click', () => {
       const resource = link.dataset.downloadResource;
+      fetch(`/api/download-counts/${resource}`, {
+        method: 'POST',
+        keepalive: true
+      }).catch(() => {
+        // The PDF download itself must never depend on the counter request.
+      });
+
       if (downloadCountState.has(resource)) {
         updateDownloadCount(resource, downloadCountState.get(resource) + 1);
       }

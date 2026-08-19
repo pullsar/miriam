@@ -6,18 +6,18 @@ Track how often visitors download the full memorial brochure and the mobile Orde
 
 ## Counting Model
 
-The site will count successful download requests rather than attempting to identify unique people. No IP address, email address, browser fingerprint or other personal identifier will be stored.
+The site will count deliberate activations of its PDF download links rather than attempting to identify unique people. No IP address, email address, browser fingerprint or other personal identifier will be stored. Explicit click tracking prevents health checks, crawlers and PDF metadata requests from inflating the totals.
 
 Two durable counters will be stored in the existing SQLite database:
 
 - `brochure` for the full memorial brochure;
 - `order-of-mass` for the mobile readings and Order of Mass.
 
-Each request to one of the two existing stable PDF URLs will increment its counter before the file is served. Explicit Express routes will be registered before static-file middleware so the URLs remain unchanged while requests can be counted.
+The two existing stable PDF URLs remain unchanged. When a visitor activates a tracked link, the browser sends a small anonymous POST to the matching counter endpoint while the PDF download proceeds independently.
 
 ## API and Data Flow
 
-The server will create a `download_counts` table with a resource key and non-negative integer count. Prepared statements will increment a resource atomically and return both totals.
+The server will create a `download_click_counts` table with a resource key and non-negative integer count. Prepared statements will increment a resource atomically and return both totals.
 
 `GET /api/download-counts` will return:
 
@@ -28,9 +28,9 @@ The server will create a `download_counts` table with a resource key and non-neg
 }
 ```
 
-The browser will fetch this endpoint after the page loads. Every badge associated with a resource will receive the same total. Clicking a PDF link will optimistically increase all visible badges for that resource by one; the server remains authoritative and records the actual request.
+The browser will fetch this endpoint after the page loads. Every badge associated with a resource will receive the same total. Clicking a PDF link will optimistically increase all visible badges for that resource by one and POST the anonymous activation; the server remains authoritative.
 
-If the API is unavailable, the links continue to work and their badges remain hidden. If a PDF is missing, the download route returns a normal 404 and does not increment the counter.
+If the API is unavailable, the links continue to work and their badges remain hidden. If a PDF is missing, the counter endpoint and download route return a normal 404 without incrementing the total.
 
 ## Interface
 
@@ -53,4 +53,4 @@ Automated tests will cover:
 - the hero's direct Memorial Brochure action;
 - preservation of the programme section and navigation.
 
-Deployment verification will request the live API, perform controlled download requests, confirm the totals increase independently, and visually check the badges at desktop and mobile widths.
+Deployment verification will request the live API, perform controlled anonymous counter POSTs, confirm the totals increase independently, and visually check the badges at desktop and mobile widths.
