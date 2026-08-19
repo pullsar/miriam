@@ -11,7 +11,6 @@ const sharp = require('sharp');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
@@ -64,6 +63,70 @@ const updatePhotoFilename = db.prepare(
   `UPDATE photos SET filename = @filename WHERE id = @id`
 );
 const getAllPhotos = db.prepare(`SELECT * FROM photos ORDER BY created_at DESC LIMIT 200`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS download_counts (
+    resource TEXT PRIMARY KEY,
+    count    INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0)
+  )
+`);
+
+const incrementDownloadCount = db.prepare(`
+  INSERT INTO download_counts (resource, count) VALUES (?, 1)
+  ON CONFLICT(resource) DO UPDATE SET count = count + 1
+`);
+const getDownloadCounts = db.prepare(`SELECT resource, count FROM download_counts`);
+
+const downloadsDir = process.env.DOWNLOADS_DIR || path.join(__dirname, 'public', 'downloads');
+const trackedDownloads = [
+  {
+    resource: 'brochure',
+    fileName: 'prof-miriam-ngozi-mgbakor-memorial-brochure.pdf'
+  },
+  {
+    resource: 'order-of-mass',
+    fileName: 'prof-miriam-ngozi-mgbakor-mobile-readings.pdf'
+  }
+];
+
+trackedDownloads.forEach(({ resource, fileName }) => {
+  app.get(`/downloads/${fileName}`, (req, res) => {
+    const filePath = path.join(downloadsDir, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.sendStatus(404);
+    }
+
+    res.download(filePath, fileName, err => {
+      if (err) {
+        console.error(`[downloads] Could not serve ${resource}:`, err.message);
+        if (!res.headersSent) res.sendStatus(err.statusCode || 500);
+        return;
+      }
+
+      try {
+        incrementDownloadCount.run(resource);
+      } catch (dbError) {
+        console.error(`[downloads] Could not count ${resource}:`, dbError.message);
+      }
+    });
+  });
+});
+
+app.get('/api/download-counts', (req, res) => {
+  try {
+    const totals = Object.fromEntries(
+      getDownloadCounts.all().map(row => [row.resource, row.count])
+    );
+    res.json({
+      brochure: totals.brochure || 0,
+      orderOfMass: totals['order-of-mass'] || 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not retrieve download totals.' });
+  }
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ==================== UPLOADS ====================
 function ensureDir(dir) {
@@ -654,4 +717,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { app, startServer };
+module.exports = { app, db, startServer };
