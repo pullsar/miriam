@@ -37,7 +37,11 @@ const insertTribute = db.prepare(
   `INSERT INTO tributes (name, email, phone, relationship, message)
    VALUES (@name, @email, @phone, @relationship, @message)`
 );
-const getAllTributes = db.prepare(`SELECT * FROM tributes ORDER BY created_at DESC`);
+const getAllTributes = db.prepare(`
+  SELECT id, name, relationship, message, created_at
+  FROM tributes
+  ORDER BY created_at DESC, id DESC
+`);
 const getTributeCount = db.prepare(`SELECT COUNT(*) AS cnt FROM tributes`);
 
 db.exec(`
