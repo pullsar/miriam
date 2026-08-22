@@ -33,5 +33,7 @@ test('archive controller loads all tributes and renders user copy without HTML i
   assert.match(source, /loadMoreTributes/);
   assert.match(source, /tributeDialog/);
   assert.match(source, /#tribute-/);
+  assert.match(source, /history\.pushState/);
+  assert.match(source, /addEventListener\('popstate'/);
   assert.doesNotMatch(source, /\.innerHTML\s*=/);
 });

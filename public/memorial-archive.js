@@ -78,21 +78,25 @@
     let selectedCategory = 'All';
     let visibleCount = PAGE_SIZE;
     let activeTribute = null;
-    let hashWasOpened = false;
+    let openedWithHistory = false;
 
     function setStatus(message) {
       if (status) status.textContent = message;
     }
 
-    function closeDialog() {
+    function closeDialog(options = {}) {
       if (!dialog) return;
+      const fromHistory = options.fromHistory === true;
+      const returnToArchive = openedWithHistory && /^#tribute-\d+$/.test(window.location.hash);
       if (dialog.open && typeof dialog.close === 'function') dialog.close();
       else dialog.removeAttribute('open');
-      if (hashWasOpened && /^#tribute-\d+$/.test(window.location.hash)) {
+      activeTribute = null;
+      openedWithHistory = false;
+      if (!fromHistory && returnToArchive) {
+        history.back();
+      } else if (!fromHistory && /^#tribute-\d+$/.test(window.location.hash)) {
         history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
       }
-      activeTribute = null;
-      hashWasOpened = false;
     }
 
     function openTribute(tribute, updateHash) {
@@ -103,8 +107,8 @@
       dialogMessage.replaceChildren();
       tribute.paragraphs.forEach(paragraph => dialogMessage.append(makeElement('p', '', paragraph)));
       if (updateHash) {
-        history.replaceState(null, '', tribute.hash);
-        hashWasOpened = true;
+        history.pushState({ tributeId: tribute.id }, '', tribute.hash);
+        openedWithHistory = true;
       }
       if (typeof dialog.showModal === 'function') dialog.showModal();
       else dialog.setAttribute('open', '');
@@ -180,6 +184,15 @@
         window.setTimeout(() => { dialogShare.textContent = 'Copy link to this tribute'; }, 1800);
       });
     }
+    window.addEventListener('popstate', () => {
+      const match = window.location.hash.match(/^#tribute-(\d+)$/);
+      const tribute = match ? tributes.find(item => item.id === Number(match[1])) : null;
+      if (tribute && !dialog?.open) {
+        openTribute(tribute, false);
+      } else if (dialog?.open && (!tribute || tribute.id !== activeTribute?.id)) {
+        closeDialog({ fromHistory: true });
+      }
+    });
 
     fetch('/api/tributes', { headers: { Accept: 'application/json' } })
       .then(response => {
