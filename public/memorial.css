@@ -1,0 +1,8 @@
+/* Permanent memorial presentation. The complete ceremonial visual system is defined here. */
+.download-count {
+  display: inline-grid;
+}
+
+.download-count[hidden] {
+  display: none;
+}

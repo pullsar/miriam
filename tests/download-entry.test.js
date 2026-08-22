@@ -26,35 +26,32 @@ test('approved memorial PDFs are publicly downloadable', () => {
   assert.equal(pdfHeader(readings), '%PDF');
 });
 
-test('entrance and in-site sections expose both stable download links', () => {
+test('the memorial archive exposes both stable download links once', () => {
   const html = read('public/index.html');
 
   const brochureHref = '/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf';
   const readingsHref = '/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf';
 
-  assert.equal(html.split(`href="${brochureHref}"`).length - 1, 3);
-  assert.equal(html.split(`href="${readingsHref}"`).length - 1, 2);
-  assert.match(html, /id="preloaderDownloads"/);
+  assert.equal(html.split(`href="${brochureHref}"`).length - 1, 1);
+  assert.equal(html.split(`href="${readingsHref}"`).length - 1, 1);
+  assert.match(html, /<section[^>]+id="memorial-archive"/);
 });
 
-test('the hero links directly to the memorial brochure', () => {
+test('the hero leads directly to tributes and gallery', () => {
   const html = read('public/index.html');
 
-  assert.match(
-    html,
-    /<a class="btn-hero btn-hero-outline" href="\/downloads\/prof-miriam-ngozi-mgbakor-memorial-brochure\.pdf" download data-download-resource="brochure">Memorial Brochure<\/a>/
-  );
-  assert.match(html, /<li><a href="#programme">Programme<\/a><\/li>/);
-  assert.match(html, /<section class="section programme" id="programme">/);
+  assert.match(html, /href="#tributes"[^>]*>Read Her Tributes<\/a>/);
+  assert.match(html, /href="#gallery"[^>]*>View Her Gallery<\/a>/);
+  assert.doesNotMatch(html, /id="programme"|id="venues"|id="attire"|id="qr"/);
 });
 
 test('PDF links expose synchronized number-only counter hooks', () => {
   const html = read('public/index.html');
 
-  assert.equal(html.split('data-download-resource="brochure"').length - 1, 3);
-  assert.equal(html.split('data-download-resource="order-of-mass"').length - 1, 2);
-  assert.equal(html.split('class="download-count" data-download-count="brochure" hidden').length - 1, 2);
-  assert.equal(html.split('class="download-count" data-download-count="order-of-mass" hidden').length - 1, 2);
+  assert.equal(html.split('data-download-resource="brochure"').length - 1, 1);
+  assert.equal(html.split('data-download-resource="order-of-mass"').length - 1, 1);
+  assert.equal(html.split('data-download-count="brochure"').length - 1, 1);
+  assert.equal(html.split('data-download-count="order-of-mass"').length - 1, 1);
 });
 
 test('the tribute form contains no stray editorial text', () => {
@@ -65,7 +62,7 @@ test('the tribute form contains no stray editorial text', () => {
 
 test('download totals progressively enhance without blocking the PDF links', () => {
   const script = read('public/app.js');
-  const styles = read('public/style.css');
+  const styles = read('public/memorial.css');
 
   assert.match(script, /fetch\('\/api\/download-counts'/);
   assert.match(script, /new Intl\.NumberFormat/);
@@ -77,19 +74,9 @@ test('download totals progressively enhance without blocking the PDF links', () 
   assert.match(styles, /\.download-count\[hidden\]\s*\{[\s\S]*?display:\s*none/);
 });
 
-test('download controls cannot trigger the entrance interaction', () => {
-  const script = read('public/app.js');
-
-  assert.match(script, /preloaderDownloads\.addEventListener\('click',[\s\S]*?stopPropagation\(\)/);
-  assert.match(script, /preloaderDownloads\.addEventListener\('keydown',[\s\S]*?stopPropagation\(\)/);
-});
-
-test('the entrance has a standalone control instead of nesting links in an ARIA button', () => {
+test('the permanent memorial opens without an entrance overlay', () => {
   const html = read('public/index.html');
-  const script = read('public/app.js');
 
-  assert.match(html, /<section class="preloader" id="preloader" aria-labelledby="preloaderTitle">/);
-  assert.doesNotMatch(html, /class="preloader"[^>]*role="button"/);
-  assert.match(html, /<button class="preloader-cta" id="preloaderEnter" type="button">/);
-  assert.match(script, /preloaderEnter\.addEventListener\('click',[\s\S]*?enter\(\)/);
+  assert.doesNotMatch(html, /id="preloader"|preload-locked|Click or tap to enter/);
+  assert.match(html, /<body>/);
 });
