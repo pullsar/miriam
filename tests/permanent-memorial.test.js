@@ -19,6 +19,15 @@ test('homepage is a permanent tribute and gallery archive', () => {
   assert.doesNotMatch(html, /Programme of events|The Journey Home|Venues|Attire|Scan to Visit/);
 });
 
+test('memorial styles and scripts carry a shared deployment revision', () => {
+  const html = read('public/index.html');
+  const revision = '20260822b';
+
+  for (const asset of ['memorial.css', 'memorial-utils.js', 'memorial-archive.js', 'app.js']) {
+    assert.match(html, new RegExp(`/${asset.replace('.', '\\.')}` + `\\?v=${revision}`));
+  }
+});
+
 test('hero honours Miriam directly and uses only the approved glory song', () => {
   const html = read('public/index.html');
 
