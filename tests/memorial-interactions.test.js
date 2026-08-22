@@ -26,6 +26,10 @@ test('gallery merges submitted photographs safely and supports lightbox navigati
   assert.doesNotMatch(source, /\.innerHTML\s*=/);
 });
 
+test('gallery omits the four reviewed uploads that do not show Miriam', () => {
+  assert.match(source, /EXCLUDED_GALLERY_PHOTO_IDS\s*=\s*new Set\(\[[\s\S]*51,\s*52,\s*53,\s*69[\s\S]*\]\)/);
+});
+
 test('tribute and photograph forms retain their live upload endpoints', () => {
   assert.match(source, /'\/api\/tribute'/);
   assert.match(source, /'\/api\/upload-photos'/);

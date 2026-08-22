@@ -106,7 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let lightboxIndex = 0;
   // Family-reviewed exclusions remain stored on the server but are not shown in the memorial gallery.
   const EXCLUDED_GALLERY_PHOTO_IDS = new Set([
-    11, 15, 16, 17, 29, 32, 35, 36, 37, 42, 43, 44, 45, 46, 48, 49, 50, 54, 58, 60, 63, 64, 65, 66, 71
+    11, 15, 16, 17, 29, 32, 35, 36, 37, 42, 43, 44, 45, 46, 48, 49, 50, 54, 58, 60, 63, 64, 65, 66, 71,
+    51, 52, 53, 69
   ]);
 
   function lightboxItems() {

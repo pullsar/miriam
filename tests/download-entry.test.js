@@ -26,14 +26,15 @@ test('approved memorial PDFs are publicly downloadable', () => {
   assert.equal(pdfHeader(readings), '%PDF');
 });
 
-test('the memorial archive exposes both stable download links once', () => {
+test('the brochure is downloadable from the hero and memorial archive', () => {
   const html = read('public/index.html');
 
   const brochureHref = '/downloads/prof-miriam-ngozi-mgbakor-memorial-brochure.pdf';
   const readingsHref = '/downloads/prof-miriam-ngozi-mgbakor-mobile-readings.pdf';
 
-  assert.equal(html.split(`href="${brochureHref}"`).length - 1, 1);
+  assert.equal(html.split(`href="${brochureHref}"`).length - 1, 2);
   assert.equal(html.split(`href="${readingsHref}"`).length - 1, 1);
+  assert.match(html, /class="[^"]*hero-download[^"]*"[^>]+href="\/downloads\/prof-miriam-ngozi-mgbakor-memorial-brochure\.pdf"[^>]+download[^>]+data-download-resource="brochure"[^>]*>Download Brochure<\/a>/);
   assert.match(html, /<section[^>]+id="memorial-archive"/);
 });
 
@@ -49,10 +50,22 @@ test('the hero leads directly to tributes and gallery', () => {
 test('PDF links expose synchronized number-only counter hooks', () => {
   const html = read('public/index.html');
 
-  assert.equal(html.split('data-download-resource="brochure"').length - 1, 1);
+  assert.equal(html.split('data-download-resource="brochure"').length - 1, 2);
   assert.equal(html.split('data-download-resource="order-of-mass"').length - 1, 1);
   assert.equal(html.split('data-download-count="brochure"').length - 1, 1);
   assert.equal(html.split('data-download-count="order-of-mass"').length - 1, 1);
+});
+
+test('the phone hero gives the brochure download a full-width row', () => {
+  const styles = read('public/memorial.css');
+
+  assert.match(styles, /@media \(max-width: 480px\)[\s\S]*?\.hero-download\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/);
+});
+
+test('short desktop screens keep every hero control inside the first viewport', () => {
+  const styles = read('public/memorial.css');
+
+  assert.match(styles, /@media \(max-height: 760px\) and \(min-width: 769px\)[\s\S]*?\.hero-copy\s*\{[^}]*padding:\s*90px\s+56%\s+50px\s+0/);
 });
 
 test('the tribute form contains no stray editorial text', () => {

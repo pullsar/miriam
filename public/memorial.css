@@ -249,6 +249,10 @@ a { color: inherit; }
   .resources-shell { gap: 50px; }
 }
 
+@media (max-height: 760px) and (min-width: 769px) {
+  .hero-copy { padding: 90px 56% 50px 0; }
+}
+
 @media (max-width: 768px) {
   :root { --shell: min(100% - 34px, 680px); }
   body { font-size: 16px; }
@@ -303,6 +307,7 @@ a { color: inherit; }
   .hero-kicker { margin-bottom: 17px; }
   .hero-dedication { line-height: 1.5; }
   .hero-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .hero-download { grid-column: 1 / -1; }
   .ceremonial-button { min-height: 50px; padding-inline: 12px; font-size: 9px; }
   .life-heading h2, .gallery-heading h2, .share-heading h2, .resources-shell h2 { font-size: 48px; }
   .life-heading blockquote { font-size: 22px; }

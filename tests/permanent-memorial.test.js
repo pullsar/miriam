@@ -21,11 +21,20 @@ test('homepage is a permanent tribute and gallery archive', () => {
 
 test('memorial styles and scripts carry a shared deployment revision', () => {
   const html = read('public/index.html');
-  const revision = '20260822b';
+  const revision = '20260822c';
 
   for (const asset of ['memorial.css', 'memorial-utils.js', 'memorial-archive.js', 'app.js']) {
     assert.match(html, new RegExp(`/${asset.replace('.', '\\.')}` + `\\?v=${revision}`));
   }
+});
+
+test('download resources use concise active language', () => {
+  const html = read('public/index.html');
+
+  assert.match(html, /Memorial downloads/);
+  assert.match(html, /<h2 id="resourcesTitle">Brochure &amp; Readings<\/h2>/);
+  assert.match(html, /Download the memorial brochure or the bilingual Order of Mass\./);
+  assert.doesNotMatch(html, /Her story, preserved|part of Miriam’s permanent family archive/);
 });
 
 test('hero honours Miriam directly and uses only the approved glory song', () => {
