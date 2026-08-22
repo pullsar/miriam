@@ -34,3 +34,13 @@ test('focus, contrast, dialogs, and reduced motion are deliberately handled', ()
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /scroll-margin-top/);
 });
+
+test('hero copy shares the centered editorial shell', () => {
+  assert.match(css, /\.hero-copy\s*\{[^}]*margin-inline:\s*auto/s);
+});
+
+test('mobile tribute filters scroll discreetly without a native scrollbar or offset strip', () => {
+  assert.match(css, /\.tribute-filters\s*\{[^}]*scrollbar-width:\s*none/s);
+  assert.match(css, /\.tribute-filters::\-webkit-scrollbar\s*\{[^}]*display:\s*none/s);
+  assert.match(css, /@media\s*\(max-width:\s*768px\)[\s\S]*scroll-margin-top:\s*68px/);
+});

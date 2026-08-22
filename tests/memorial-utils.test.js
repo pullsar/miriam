@@ -14,6 +14,8 @@ test('contributor names use respectful capitalization and preserve titles', () =
   assert.equal(formatContributorName('rev. james ogbonna, c.s.sp.'), 'Rev. James Ogbonna, C.S.Sp.');
   assert.equal(formatContributorName('DR MRS VERA MOGBOH'), 'Dr. Mrs. Vera Mogboh');
   assert.equal(formatContributorName('ESUT MANAGEMENT'), 'ESUT Management');
+  assert.equal(formatContributorName('CWO, NFCS AND FANRM'), 'CWO, NFCS and FANRM');
+  assert.equal(formatContributorName('R.I.T.A. AMSSRN'), 'R.I.T.A. AMSSRN');
   assert.equal(formatContributorName('family of late mr. ogbonna'), 'Family of Late Mr. Ogbonna');
 });
 

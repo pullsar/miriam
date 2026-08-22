@@ -22,6 +22,14 @@
     ['assoc', 'Assoc.'],
     ['assoc.', 'Assoc.'],
     ['esut', 'ESUT'],
+    ['cwo', 'CWO'],
+    ['nfcs', 'NFCS'],
+    ['fanrm', 'FANRM'],
+    ['hygy', 'HYGY'],
+    ['amssrn', 'AMSSRN'],
+    ['a.u.', 'A.U.'],
+    ['c.u.', 'C.U.'],
+    ['r.i.t.a.', 'R.I.T.A.'],
     ['c.s.sp', 'C.S.Sp.'],
     ['c.s.sp.', 'C.S.Sp.']
   ]);

@@ -57,7 +57,7 @@ a { color: inherit; }
 .hero-ornament::before, .hero-ornament::after { content: ""; position: absolute; background: var(--gold); opacity: .7; }
 .hero-ornament::before { width: 1px; height: 78px; top: -38px; left: 50%; }
 .hero-ornament::after { height: 1px; width: 78px; left: -38px; top: 50%; }
-.hero-copy { position: relative; z-index: 2; width: var(--shell); min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 130px 56% 100px 0; }
+.hero-copy { position: relative; z-index: 2; width: var(--shell); min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; margin-inline: auto; padding: 130px 56% 100px 0; }
 .hero-kicker { margin: 0 0 24px; color: var(--gold-light); font: 600 11px/1 var(--sans); letter-spacing: .3em; text-transform: uppercase; }
 .hero-copy h1 { margin: 0; max-width: 660px; font: 600 clamp(62px, 7vw, 104px)/.79 var(--serif-display); letter-spacing: -.045em; text-wrap: balance; }
 .hero-years { margin: 30px 0 0; color: var(--gold-light); font: 500 19px/1 var(--sans); letter-spacing: .28em; }
@@ -271,7 +271,9 @@ a { color: inherit; }
   .archive-heading { margin-bottom: 38px; }
   .tribute-tools { padding-top: 20px; }
   .tribute-search { max-width: none; }
-  .tribute-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 5px; scrollbar-width: thin; }
+  #her-life, #tributes, #gallery, #share-a-memory, #memorial-archive { scroll-margin-top: 68px; }
+  .tribute-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+  .tribute-filters::-webkit-scrollbar { display: none; }
   .tribute-filters button { flex: 0 0 auto; }
   .archive-tribute-standard, .archive-tribute-compact { grid-column: span 6; }
   .archive-tribute-feature { padding: 38px 30px; }

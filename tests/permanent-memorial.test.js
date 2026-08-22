@@ -53,3 +53,8 @@ test('optimized academic and younger-years portraits exist', () => {
     assert.ok(fs.statSync(image).size < 1_500_000, `${file} should be web optimized`);
   }
 });
+
+test('lightbox does not request the page itself as an empty image source', () => {
+  const html = read('public/index.html');
+  assert.doesNotMatch(html, /id="lightboxImage"\s+src=""/);
+});
