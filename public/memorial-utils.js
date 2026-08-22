@@ -107,12 +107,18 @@
     });
   }
 
+  function curatePhotos(photos, excludedIds) {
+    const exclusions = excludedIds instanceof Set ? excludedIds : new Set(excludedIds || []);
+    return (Array.isArray(photos) ? photos : []).filter(photo => !exclusions.has(Number(photo && photo.id)));
+  }
+
   return {
     formatContributorName,
     normaliseTributeCategory,
     classifyTribute,
     filterTributes,
     photoSource,
+    curatePhotos,
     uniquePhotos
   };
 }));

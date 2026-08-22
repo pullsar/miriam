@@ -30,10 +30,35 @@ test('archive controller loads all tributes and renders user copy without HTML i
   assert.match(source, /formatContributorName/);
   assert.match(source, /textContent\s*=/);
   assert.match(source, /document\.createElement/);
-  assert.match(source, /loadMoreTributes/);
+  assert.match(source, /previousTributes/);
+  assert.match(source, /nextTributes/);
+  assert.match(source, /tributePageStatus/);
+  assert.match(source, /matchMedia\('\(max-width: 480px\)'\)/);
+  assert.doesNotMatch(source, /loadMoreTributes/);
   assert.match(source, /tributeDialog/);
+  assert.match(source, /previousTribute/);
+  assert.match(source, /nextTribute/);
+  assert.match(source, /navigateDialog/);
   assert.match(source, /#tribute-/);
   assert.match(source, /history\.pushState/);
   assert.match(source, /addEventListener\('popstate'/);
   assert.doesNotMatch(source, /\.innerHTML\s*=/);
+});
+
+test('pagination clamps the page and returns a stable visible range', () => {
+  const { paginateTributes } = require(sourcePath);
+  const tributes = Array.from({ length: 25 }, (_, index) => ({ id: index + 1 }));
+
+  assert.deepEqual(paginateTributes(tributes, 2, 12), {
+    items: tributes.slice(12, 24),
+    page: 2,
+    totalPages: 3,
+    start: 13,
+    end: 24,
+    total: 25
+  });
+  assert.equal(paginateTributes(tributes, 99, 12).page, 3);
+  assert.deepEqual(paginateTributes([], 1, 6), {
+    items: [], page: 1, totalPages: 1, start: 0, end: 0, total: 0
+  });
 });

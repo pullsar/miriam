@@ -41,7 +41,8 @@ test('the hero leads directly to tributes and gallery', () => {
   const html = read('public/index.html');
 
   assert.match(html, /href="#tributes"[^>]*>Read Her Tributes<\/a>/);
-  assert.match(html, /href="#gallery"[^>]*>View Her Gallery<\/a>/);
+  assert.match(html, /href="#gallery"[^>]*>View Gallery<\/a>/);
+  assert.doesNotMatch(html, /View Her Gallery/);
   assert.doesNotMatch(html, /id="programme"|id="venues"|id="attire"|id="qr"/);
 });
 

@@ -6,6 +6,7 @@ const {
   normaliseTributeCategory,
   classifyTribute,
   filterTributes,
+  curatePhotos,
   uniquePhotos
 } = require('../public/memorial-utils');
 
@@ -55,4 +56,16 @@ test('gallery photos are deduplicated by their normalized source', () => {
   ];
 
   assert.deepEqual(uniquePhotos(photos), [photos[0], photos[2]]);
+});
+
+test('gallery curation hides reviewed uploads without mutating the stored list', () => {
+  const photos = [
+    { id: 11, url: '/uploads/letter.jpg' },
+    { id: 12, url: '/uploads/family.jpg' },
+    { id: 13, url: '/uploads/portrait.jpg' }
+  ];
+  const snapshot = structuredClone(photos);
+
+  assert.deepEqual(curatePhotos(photos, new Set([11, 13])), [photos[1]]);
+  assert.deepEqual(photos, snapshot);
 });

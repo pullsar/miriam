@@ -24,9 +24,18 @@ test('hero honours Miriam directly and uses only the approved glory song', () =>
 
   assert.match(html, /Professor Miriam Ngozi Mgbakor/);
   assert.match(html, /1960[–-]2026/);
-  assert.match(html, /id="musicBtn"[^>]+aria-label="Play the Glory Song"/);
+  assert.match(html, /id="musicBtn"[^>]+aria-label="Turn music on"/);
+  assert.match(html, /id="musicLabel">Music Off<\/span>/);
   assert.match(html, /<audio id="bgMusic" src="\/audio\/o-lord-my-god-how-great\.mp3"/);
-  assert.doesNotMatch(html, /soon-ah-will-be-done/);
+  assert.doesNotMatch(html, /soon-ah-will-be-done|Play the Glory Song|Pause the Glory Song/);
+});
+
+test('biography speaks directly about Miriam without editorial reporting', () => {
+  const html = read('public/index.html');
+
+  assert.match(html, /At home and among those closest to her, she was Mimi, May May, Aunty Mimi, Mummy and Sister Mgbakor\./);
+  assert.match(html, /She carried that remarkable warmth into every part of her life\./);
+  assert.doesNotMatch(html, /the names spoken with most affection|photographs and tributes gathered here preserve/i);
 });
 
 test('biography, tribute archive, gallery, submissions, and archive resources are present', () => {
@@ -43,6 +52,9 @@ test('biography, tribute archive, gallery, submissions, and archive resources ar
   assert.match(html, /id="tributeForm"/);
   assert.match(html, /id="photoUploadForm"/);
   assert.match(html, /id="tributeDialog"/);
+  assert.match(html, /id="previousTribute"[^>]*aria-label="Previous tribute"[^>]*>Previous<\/button>/);
+  assert.match(html, /id="nextTribute"[^>]*aria-label="Next tribute"[^>]*>Next<\/button>/);
+  assert.match(html, /id="tributeDialogPosition"/);
 });
 
 test('optimized academic and younger-years portraits exist', () => {

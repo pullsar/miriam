@@ -7,7 +7,25 @@
   if (root) root.MemorialArchive = api;
   if (root && root.document) root.document.addEventListener('DOMContentLoaded', api.boot);
 }(typeof globalThis !== 'undefined' ? globalThis : this, function createArchive(utils) {
-  const PAGE_SIZE = 12;
+  const DESKTOP_PAGE_SIZE = 12;
+  const MOBILE_PAGE_SIZE = 6;
+
+  function paginateTributes(tributes, requestedPage, pageSize) {
+    const source = Array.isArray(tributes) ? tributes : [];
+    const safePageSize = Math.max(1, Number(pageSize) || DESKTOP_PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(source.length / safePageSize));
+    const page = Math.min(totalPages, Math.max(1, Number(requestedPage) || 1));
+    const offset = (page - 1) * safePageSize;
+    const items = source.slice(offset, offset + safePageSize);
+    return {
+      items,
+      page,
+      totalPages,
+      start: items.length ? offset + 1 : 0,
+      end: items.length ? offset + items.length : 0,
+      total: source.length
+    };
+  }
 
   function createTributeViewModel(tribute) {
     const message = String((tribute && tribute.message) || '').trim();
@@ -68,15 +86,22 @@
     const status = document.getElementById('tributeStatus');
     const search = document.getElementById('tributeSearch');
     const filters = document.getElementById('tributeFilters');
-    const loadMoreTributes = document.getElementById('loadMoreTributes');
+    const pagination = document.getElementById('tributePagination');
+    const previousTributes = document.getElementById('previousTributes');
+    const nextTributes = document.getElementById('nextTributes');
+    const tributePageStatus = document.getElementById('tributePageStatus');
     const dialog = document.getElementById('tributeDialog');
     const dialogName = document.getElementById('tributeDialogName');
     const dialogCategory = document.getElementById('tributeDialogCategory');
     const dialogMessage = document.getElementById('tributeDialogMessage');
     const dialogShare = document.getElementById('tributeDialogShare');
+    const previousTribute = document.getElementById('previousTribute');
+    const nextTribute = document.getElementById('nextTribute');
+    const tributeDialogPosition = document.getElementById('tributeDialogPosition');
     let tributes = [];
     let selectedCategory = 'All';
-    let visibleCount = PAGE_SIZE;
+    const phoneMedia = window.matchMedia('(max-width: 480px)');
+    let currentPage = 1;
     let activeTribute = null;
     let openedWithHistory = false;
 
@@ -99,6 +124,21 @@
       }
     }
 
+    function dialogSequence() {
+      const filtered = currentFiltered();
+      return activeTribute && filtered.some(tribute => tribute.id === activeTribute.id) ? filtered : tributes;
+    }
+
+    function updateDialogNavigation() {
+      const sequence = dialogSequence();
+      const index = sequence.findIndex(tribute => tribute.id === activeTribute?.id);
+      if (previousTribute) previousTribute.disabled = index <= 0;
+      if (nextTribute) nextTribute.disabled = index < 0 || index >= sequence.length - 1;
+      if (tributeDialogPosition) {
+        tributeDialogPosition.textContent = index >= 0 ? `${index + 1} of ${sequence.length}` : '';
+      }
+    }
+
     function openTribute(tribute, updateHash) {
       if (!dialog || !tribute) return;
       activeTribute = tribute;
@@ -110,8 +150,19 @@
         history.pushState({ tributeId: tribute.id }, '', tribute.hash);
         openedWithHistory = true;
       }
+      updateDialogNavigation();
       if (typeof dialog.showModal === 'function') dialog.showModal();
       else dialog.setAttribute('open', '');
+    }
+
+    function navigateDialog(delta) {
+      const sequence = dialogSequence();
+      const index = sequence.findIndex(tribute => tribute.id === activeTribute?.id);
+      const target = sequence[index + delta];
+      if (!target) return;
+      history.replaceState({ tributeId: target.id }, '', target.hash);
+      openTribute(target, false);
+      dialog.scrollTop = 0;
     }
 
     function currentFiltered() {
@@ -121,24 +172,46 @@
       });
     }
 
+    function pageSize() {
+      return phoneMedia.matches ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
+    }
+
+    function updatePagination(page) {
+      if (!pagination) return;
+      pagination.hidden = page.total <= pageSize();
+      if (tributePageStatus) tributePageStatus.textContent = `Page ${page.page} of ${page.totalPages}`;
+      if (previousTributes) previousTributes.disabled = page.page <= 1;
+      if (nextTributes) nextTributes.disabled = page.page >= page.totalPages;
+    }
+
     function render() {
       const filtered = currentFiltered();
-      const visible = filtered.slice(0, visibleCount);
+      const page = paginateTributes(filtered, currentPage, pageSize());
+      currentPage = page.page;
       const fragment = document.createDocumentFragment();
-      visible.forEach(tribute => fragment.append(createTributeCard(tribute, openTribute)));
+      page.items.forEach(tribute => fragment.append(createTributeCard(tribute, openTribute)));
       grid.replaceChildren(fragment);
 
       if (!filtered.length) {
         setStatus('No tributes match this search. Try another name or category.');
       } else {
-        setStatus(`Showing ${visible.length} of ${filtered.length} tributes`);
+        setStatus(`Showing ${page.start}–${page.end} of ${page.total} tributes`);
       }
-      if (loadMoreTributes) loadMoreTributes.hidden = visible.length >= filtered.length;
+      updatePagination(page);
     }
 
     function resetAndRender() {
-      visibleCount = PAGE_SIZE;
+      currentPage = 1;
       render();
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      render();
+      document.getElementById('tributes')?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start'
+      });
     }
 
     if (search) search.addEventListener('input', resetAndRender);
@@ -155,12 +228,11 @@
         resetAndRender();
       });
     }
-    if (loadMoreTributes) {
-      loadMoreTributes.addEventListener('click', () => {
-        visibleCount += PAGE_SIZE;
-        render();
-      });
-    }
+    previousTributes?.addEventListener('click', () => changePage(-1));
+    nextTributes?.addEventListener('click', () => changePage(1));
+    previousTribute?.addEventListener('click', () => navigateDialog(-1));
+    nextTribute?.addEventListener('click', () => navigateDialog(1));
+    phoneMedia.addEventListener?.('change', resetAndRender);
     if (dialog) {
       dialog.querySelector('[data-close-tribute]')?.addEventListener('click', closeDialog);
       dialog.addEventListener('click', event => {
@@ -211,5 +283,5 @@
       .catch(() => setStatus('Her tributes are temporarily unavailable. Please try again shortly.'));
   }
 
-  return { boot, createTributeViewModel, excerpt };
+  return { boot, createTributeViewModel, excerpt, paginateTributes };
 }));

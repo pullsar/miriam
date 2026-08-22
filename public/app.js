@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function setMusicState(playing) {
     if (!musicBtn || !musicLabel) return;
     musicBtn.classList.toggle('playing', playing);
-    musicBtn.setAttribute('aria-label', playing ? 'Pause the Glory Song' : 'Play the Glory Song');
-    musicLabel.textContent = playing ? 'Pause the Glory Song' : 'Play the Glory Song';
+    musicBtn.setAttribute('aria-label', playing ? 'Turn music off' : 'Turn music on');
+    musicLabel.textContent = playing ? 'Music On' : 'Music Off';
   }
 
   if (music && musicBtn) {
@@ -104,6 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const lightboxNext = document.getElementById('lightboxNext');
   const lightboxClose = document.getElementById('lightboxClose');
   let lightboxIndex = 0;
+  // Family-reviewed exclusions remain stored on the server but are not shown in the memorial gallery.
+  const EXCLUDED_GALLERY_PHOTO_IDS = new Set([
+    11, 15, 16, 17, 29, 32, 35, 36, 37, 42, 43, 44, 45, 46, 48, 49, 50, 54, 58, 60, 63, 64, 65, 66, 71
+  ]);
 
   function lightboxItems() {
     return galleryGrid ? Array.from(galleryGrid.querySelectorAll('[data-lightbox-src]')) : [];
@@ -181,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const response = await fetch('/api/photos', { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error('Photos unavailable');
-      const submitted = utils.uniquePhotos(await response.json());
+      const submitted = utils.uniquePhotos(utils.curatePhotos(await response.json(), EXCLUDED_GALLERY_PHOTO_IDS));
       const existing = new Set(lightboxItems().map(item => item.dataset.lightboxSrc.toLowerCase()));
       const fragment = document.createDocumentFragment();
       let added = 0;

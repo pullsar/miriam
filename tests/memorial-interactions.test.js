@@ -5,15 +5,20 @@ const path = require('node:path');
 
 const source = fs.readFileSync(path.resolve(__dirname, '../public/app.js'), 'utf8');
 
-test('music control is a single-track glory-song experience', () => {
-  assert.match(source, /Play the Glory Song/);
-  assert.match(source, /Pause the Glory Song/);
+test('music control uses concise on and off states', () => {
+  assert.match(source, /Music On/);
+  assert.match(source, /Music Off/);
+  assert.match(source, /Turn music on/);
+  assert.match(source, /Turn music off/);
+  assert.doesNotMatch(source, /Play the Glory Song|Pause the Glory Song/);
   assert.doesNotMatch(source, /soon-ah-will-be-done|playlist|playNextTrack/);
 });
 
 test('gallery merges submitted photographs safely and supports lightbox navigation', () => {
   assert.match(source, /fetch\('\/api\/photos'/);
   assert.match(source, /uniquePhotos/);
+  assert.match(source, /curatePhotos/);
+  assert.match(source, /EXCLUDED_GALLERY_PHOTO_IDS/);
   assert.match(source, /data-lightbox-src/);
   assert.match(source, /lightboxPrev/);
   assert.match(source, /lightboxNext/);
